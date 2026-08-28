@@ -27,7 +27,11 @@
     const target = document.getElementById(decodeURIComponent(location.hash.slice(1)));
     if (target) target.scrollIntoView();
   };
-  if (location.hash) window.addEventListener('load', () => setTimeout(jumpToHash, 0));
+  if (location.hash) window.addEventListener('load', () => {
+    jumpToHash();
+    if (document.fonts && document.fonts.ready) document.fonts.ready.then(jumpToHash);
+    [120, 400].forEach((t) => setTimeout(jumpToHash, t));
+  });
 
   const currentPage = body.dataset.page;
   document.querySelector(`[data-nav="${currentPage}"]`)?.classList.add('is-active');
