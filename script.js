@@ -20,6 +20,15 @@
     if (event.key === 'Escape') closeMenu();
   });
 
+  // Переход по якорю при загрузке страницы (index.html#services и т.п.):
+  // ленивые картинки и smooth-scroll мешают браузеру доскроллить сразу — повторяем после load.
+  const jumpToHash = () => {
+    if (!location.hash) return;
+    const target = document.getElementById(decodeURIComponent(location.hash.slice(1)));
+    if (target) target.scrollIntoView();
+  };
+  if (location.hash) window.addEventListener('load', () => setTimeout(jumpToHash, 0));
+
   const currentPage = body.dataset.page;
   document.querySelector(`[data-nav="${currentPage}"]`)?.classList.add('is-active');
   document.querySelectorAll('[data-year]').forEach((node) => { node.textContent = new Date().getFullYear(); });
