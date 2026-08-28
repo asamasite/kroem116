@@ -44,7 +44,7 @@ button, input, textarea { font: inherit; }
 
 .hero { min-height: 770px; height: 100svh; max-height: 930px; position: relative; display: grid; align-items: center; color: var(--white); overflow: hidden; }
 .hero-image, .hero-shade { position: absolute; inset: 0; }
-.hero-image { background: url("assets/images/hero-roof-v2.png") center / cover no-repeat; transform: scale(1.015); animation: heroIn 1.2s ease-out both; image-rendering: auto; }
+.hero-image { background: url("assets/images/hero-roof-v2.jpg") center / cover no-repeat; transform: scale(1.015); animation: heroIn 1.2s ease-out both; image-rendering: auto; }
 .hero-shade { background: linear-gradient(90deg, rgba(10,18,14,.94) 0%, rgba(14,24,18,.76) 48%, rgba(12,19,15,.18) 82%), linear-gradient(0deg, rgba(8,15,11,.54), transparent 55%); }
 .hero-content { position: relative; padding-top: 90px; }
 .eyebrow { display: flex; align-items: center; gap: 12px; margin: 0 0 22px; font-size: 11px; text-transform: uppercase; letter-spacing: .22em; font-weight: 700; color: var(--forest); }
