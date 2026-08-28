@@ -20,17 +20,16 @@
     if (event.key === 'Escape') closeMenu();
   });
 
-  // Переход по якорю при загрузке страницы (index.html#services и т.п.):
-  // ленивые картинки и smooth-scroll мешают браузеру доскроллить сразу — повторяем после load.
+  // Переход по якорю при открытии index.html#services и т.п. из меню:
+  // после полной загрузки страницы доскроллить к нужной секции без анимации.
   const jumpToHash = () => {
     if (!location.hash) return;
     const target = document.getElementById(decodeURIComponent(location.hash.slice(1)));
-    if (target) target.scrollIntoView();
+    if (target) target.scrollIntoView({ behavior: 'instant', block: 'start' });
   };
   if (location.hash) window.addEventListener('load', () => {
-    jumpToHash();
+    requestAnimationFrame(jumpToHash);
     if (document.fonts && document.fonts.ready) document.fonts.ready.then(jumpToHash);
-    [120, 400].forEach((t) => setTimeout(jumpToHash, t));
   });
 
   const currentPage = body.dataset.page;
