@@ -1,70 +1,126 @@
 (() => {
   const body = document.body;
-  const menuButton = document.querySelector('.menu-toggle');
-  const menu = document.querySelector('.site-nav');
-  const closeMenu = () => {
-    if (!menuButton || !menu) return;
-    menuButton.setAttribute('aria-expanded', 'false');
-    menu.classList.remove('is-open');
-    body.classList.remove('menu-open');
+  const preloader = document.querySelector('.preloader');
+  const loaderBar = document.querySelector('.loader-line span');
+  const loaderValue = document.querySelector('.loader-value');
+  let progress = 0;
+  const loadStart = performance.now();
+  const drawProgress = (value) => {
+    progress = Math.min(100, value);
+    if (loaderBar) loaderBar.style.width = `${progress}%`;
+    if (loaderValue) loaderValue.textContent = `${Math.round(progress)}%`;
   };
-
-  menuButton?.addEventListener('click', () => {
-    const open = menuButton.getAttribute('aria-expanded') !== 'true';
-    menuButton.setAttribute('aria-expanded', String(open));
-    menu?.classList.toggle('is-open', open);
-    body.classList.toggle('menu-open', open);
-  });
-  menu?.querySelectorAll('a').forEach((link) => link.addEventListener('click', closeMenu));
-  document.addEventListener('keydown', (event) => {
-    if (event.key === 'Escape') closeMenu();
-  });
-
-  // Переход по якорю при открытии index.html#services и т.п. из меню:
-  // после полной загрузки страницы доскроллить к нужной секции без анимации.
-  const jumpToHash = () => {
-    if (!location.hash) return;
-    const target = document.getElementById(decodeURIComponent(location.hash.slice(1)));
-    if (target) target.scrollIntoView({ behavior: 'instant', block: 'start' });
+  const loadTimer = setInterval(() => drawProgress(progress + Math.max(1, (92 - progress) * .09)), 45);
+  const finishLoad = () => {
+    clearInterval(loadTimer);
+    const wait = Math.max(0, 900 - (performance.now() - loadStart));
+    setTimeout(() => {
+      drawProgress(100);
+      setTimeout(() => { preloader?.classList.add('done'); body.classList.remove('is-loading'); }, 220);
+    }, wait);
   };
-  if (location.hash) window.addEventListener('load', () => {
-    requestAnimationFrame(jumpToHash);
-    if (document.fonts && document.fonts.ready) document.fonts.ready.then(jumpToHash);
-  });
+  if (document.readyState === 'complete') finishLoad(); else window.addEventListener('load', finishLoad, { once: true });
 
-  const currentPage = body.dataset.page;
-  document.querySelector(`[data-nav="${currentPage}"]`)?.classList.add('is-active');
-  document.querySelectorAll('[data-year]').forEach((node) => { node.textContent = new Date().getFullYear(); });
+  const header = document.querySelector('.header');
+  const progressBar = document.querySelector('.scroll-progress span');
+  const topButton = document.querySelector('.quick-top');
+  const navLinks = [...document.querySelectorAll('.nav a')];
+  const sections = [...document.querySelectorAll('[data-section]')];
+  let scrollTick = false;
+  const syncScroll = () => {
+    const y = window.scrollY;
+    const max = Math.max(1, document.documentElement.scrollHeight - innerHeight);
+    header?.classList.toggle('is-fixed', y > 70);
+    if (progressBar) progressBar.style.width = `${Math.min(100, y / max * 100)}%`;
+    if (topButton) topButton.style.opacity = y > 500 ? '1' : '.55';
+    const current = [...sections].reverse().find((section) => section.offsetTop - 160 <= y);
+    navLinks.forEach((link) => link.classList.toggle('active', current && link.getAttribute('href') === `#${current.id}`));
+    scrollTick = false;
+  };
+  window.addEventListener('scroll', () => { if (!scrollTick) { requestAnimationFrame(syncScroll); scrollTick = true; } }, { passive: true });
+  syncScroll();
 
-  const lightbox = document.querySelector('.lightbox');
-  const lightboxImage = lightbox?.querySelector('img');
-  const lightboxCaption = lightbox?.querySelector('p');
-  document.querySelectorAll('[data-lightbox]').forEach((button) => {
-    button.addEventListener('click', () => {
-      if (!lightbox || !lightboxImage || !lightboxCaption) return;
-      lightboxImage.src = button.dataset.lightbox;
-      lightboxImage.alt = button.querySelector('img')?.alt || '';
-      lightboxCaption.textContent = button.dataset.caption || '';
-      lightbox.showModal();
+  const revealItems = document.querySelectorAll('.reveal');
+  const revealObserver = new IntersectionObserver((entries, observer) => {
+    entries.forEach((entry) => { if (entry.isIntersecting) { entry.target.classList.add('visible'); observer.unobserve(entry.target); } });
+  }, { threshold: .15, rootMargin: '0px 0px -40px' });
+  revealItems.forEach((item) => revealObserver.observe(item));
+
+  const counters = document.querySelectorAll('[data-count]');
+  const countObserver = new IntersectionObserver((entries, observer) => {
+    entries.forEach((entry) => {
+      if (!entry.isIntersecting) return;
+      const node = entry.target;
+      const target = Number(node.dataset.count || 0);
+      const start = performance.now();
+      const tick = (now) => {
+        const ratio = Math.min(1, (now - start) / 850);
+        node.textContent = String(Math.round(target * (1 - Math.pow(1 - ratio, 3))));
+        if (ratio < 1) requestAnimationFrame(tick);
+      };
+      requestAnimationFrame(tick); observer.unobserve(node);
     });
-  });
-  lightbox?.querySelector('.lightbox-close')?.addEventListener('click', () => lightbox.close());
-  lightbox?.addEventListener('click', (event) => {
-    if (event.target === lightbox) lightbox.close();
-  });
+  }, { threshold: .7 });
+  counters.forEach((counter) => countObserver.observe(counter));
 
-  const observed = document.querySelectorAll('.reveal');
-  if ('IntersectionObserver' in window) {
-    const observer = new IntersectionObserver((entries) => {
-      entries.forEach((entry) => {
-        if (entry.isIntersecting) {
-          entry.target.classList.add('is-visible');
-          observer.unobserve(entry.target);
-        }
-      });
-    }, { threshold: 0.12 });
-    observed.forEach((item) => observer.observe(item));
-  } else {
-    observed.forEach((item) => item.classList.add('is-visible'));
-  }
+  const area = document.querySelector('#area');
+  const areaOut = document.querySelector('#area-out');
+  const total = document.querySelector('#total');
+  const totalNote = document.querySelector('#total-note');
+  const removal = document.querySelector('#removal');
+  const layerInputs = [...document.querySelectorAll('input[name="layers"]')];
+  let displayedTotal = 7200;
+  const animateTotal = (target) => {
+    const startValue = displayedTotal;
+    const start = performance.now();
+    const tick = (now) => {
+      const ratio = Math.min(1, (now - start) / 280);
+      displayedTotal = Math.round(startValue + (target - startValue) * ratio);
+      if (total) total.textContent = `от ${displayedTotal.toLocaleString('ru-RU')} ₽`;
+      if (ratio < 1) requestAnimationFrame(tick);
+    };
+    requestAnimationFrame(tick);
+  };
+  const calculate = () => {
+    if (!area) return;
+    const square = Number(area.value);
+    const layers = layerInputs.find((input) => input.checked)?.value || '1';
+    const amount = square * (layers === '2' ? 550 : 300) + (removal?.checked ? square * 100 : 0);
+    if (areaOut) areaOut.textContent = `${square} м²`;
+    if (totalNote) totalNote.textContent = `${square} м² · ${layers} ${layers === '1' ? 'слой' : 'слоя'}${removal?.checked ? ' · с демонтажем' : ''}`;
+    animateTotal(amount);
+  };
+  area?.addEventListener('input', calculate);
+  removal?.addEventListener('change', calculate);
+  layerInputs.forEach((input) => input.addEventListener('change', calculate));
+
+  const galleryButtons = [...document.querySelectorAll('[data-gallery]')];
+  const dialog = document.querySelector('.lightbox');
+  const dialogImage = dialog?.querySelector('img');
+  const dialogCaption = dialog?.querySelector('p');
+  let galleryIndex = 0;
+  const showGallery = (index) => {
+    if (!dialog || !dialogImage || !dialogCaption || !galleryButtons.length) return;
+    galleryIndex = (index + galleryButtons.length) % galleryButtons.length;
+    const button = galleryButtons[galleryIndex];
+    dialogImage.src = button.dataset.gallery || '';
+    dialogImage.alt = button.querySelector('img')?.alt || '';
+    dialogCaption.textContent = button.dataset.caption || '';
+    if (!dialog.open) dialog.showModal();
+  };
+  galleryButtons.forEach((button, index) => button.addEventListener('click', () => showGallery(index)));
+  dialog?.querySelector('.lightbox-close')?.addEventListener('click', () => dialog.close());
+  dialog?.querySelector('.lightbox-prev')?.addEventListener('click', () => showGallery(galleryIndex - 1));
+  dialog?.querySelector('.lightbox-next')?.addEventListener('click', () => showGallery(galleryIndex + 1));
+  dialog?.addEventListener('click', (event) => { if (event.target === dialog) dialog.close(); });
+  document.addEventListener('keydown', (event) => {
+    if (!dialog?.open) return;
+    if (event.key === 'ArrowLeft') showGallery(galleryIndex - 1);
+    if (event.key === 'ArrowRight') showGallery(galleryIndex + 1);
+  });
+  let touchX = 0;
+  dialog?.addEventListener('touchstart', (event) => { touchX = event.changedTouches[0].clientX; }, { passive: true });
+  dialog?.addEventListener('touchend', (event) => { const delta = event.changedTouches[0].clientX - touchX; if (Math.abs(delta) > 45) showGallery(galleryIndex + (delta < 0 ? 1 : -1)); }, { passive: true });
+
+  document.querySelectorAll('[data-year]').forEach((node) => { node.textContent = new Date().getFullYear(); });
 })();
