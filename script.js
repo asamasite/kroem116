@@ -16,7 +16,11 @@
     const wait = Math.max(0, 900 - (performance.now() - loadStart));
     setTimeout(() => {
       drawProgress(100);
-      setTimeout(() => { preloader?.classList.add('done'); body.classList.remove('is-loading'); }, 220);
+      setTimeout(() => {
+        preloader?.classList.add('done');
+        body.classList.remove('is-loading');
+        setTimeout(startCounters, 500);
+      }, 220);
     }, wait);
   };
   if (document.readyState === 'complete') finishLoad(); else window.addEventListener('load', finishLoad, { once: true });
@@ -34,7 +38,7 @@
     if (progressBar) progressBar.style.width = `${Math.min(100, y / max * 100)}%`;
     if (topButton) topButton.style.opacity = y > 500 ? '1' : '.55';
     const current = [...sections].reverse().find((section) => section.offsetTop - 160 <= y);
-    navLinks.forEach((link) => link.classList.toggle('active', current && link.getAttribute('href') === `#${current.id}`));
+    navLinks.forEach((link) => link.classList.toggle('active', !!current && link.getAttribute('href') === `#${current.id}`));
     scrollTick = false;
   };
   window.addEventListener('scroll', () => { if (!scrollTick) { requestAnimationFrame(syncScroll); scrollTick = true; } }, { passive: true });
@@ -46,22 +50,26 @@
   }, { threshold: .15, rootMargin: '0px 0px -40px' });
   revealItems.forEach((item) => revealObserver.observe(item));
 
-  const counters = document.querySelectorAll('[data-count]');
-  const countObserver = new IntersectionObserver((entries, observer) => {
-    entries.forEach((entry) => {
-      if (!entry.isIntersecting) return;
-      const node = entry.target;
-      const target = Number(node.dataset.count || 0);
-      const start = performance.now();
-      const tick = (now) => {
-        const ratio = Math.min(1, (now - start) / 850);
-        node.textContent = String(Math.round(target * (1 - Math.pow(1 - ratio, 3))));
-        if (ratio < 1) requestAnimationFrame(tick);
-      };
-      requestAnimationFrame(tick); observer.unobserve(node);
+  const reduceMotion = matchMedia('(prefers-reduced-motion: reduce)').matches;
+  const runCounter = (node, duration) => {
+    const target = Number(node.dataset.count || 0);
+    if (reduceMotion) { node.textContent = String(target); return; }
+    const start = performance.now();
+    const tick = (now) => {
+      const ratio = Math.min(1, (now - start) / duration);
+      node.textContent = String(Math.round(target * (1 - Math.pow(1 - ratio, 3))));
+      if (ratio < 1) requestAnimationFrame(tick);
+    };
+    requestAnimationFrame(tick);
+  };
+  let countersStarted = false;
+  function startCounters() {
+    if (countersStarted) return;
+    countersStarted = true;
+    document.querySelectorAll('[data-count]').forEach((node, index) => {
+      setTimeout(() => runCounter(node, 2200), index * 280);
     });
-  }, { threshold: .7 });
-  counters.forEach((counter) => countObserver.observe(counter));
+  }
 
   const area = document.querySelector('#area');
   const areaOut = document.querySelector('#area-out');
